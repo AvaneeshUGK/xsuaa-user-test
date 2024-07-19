@@ -1,0 +1,131 @@
+_schema-version: "3.1"
+ID: xsuaa-user-test
+description: A simple CAP project.
+version: 1.0.0
+modules:
+- name: xsuaa-user-test-srv
+  type: nodejs
+  path: gen/srv
+  requires:
+  - name: xsuaa-user-test-db
+  - name: uaa_xsuaa-user-test
+  provides:
+  - name: srv-api
+    properties:
+      srv-url: ${default-url}
+  parameters:
+    buildpack: nodejs_buildpack
+    readiness-health-check-http-endpoint: /health
+    readiness-health-check-type: http
+  build-parameters:
+    builder: npm
+- name: xsuaa-user-test-destination-content
+  type: com.sap.application.content
+  requires:
+  - name: xsuaa-user-test-destination-service
+    parameters:
+      content-target: true
+  - name: xsuaa-user-test_html_repo_host
+    parameters:
+      service-key:
+        name: xsuaa-user-test_html_repo_host-key
+  - name: uaa_xsuaa-user-test
+    parameters:
+      service-key:
+        name: uaa_xsuaa-user-test-key
+  parameters:
+    content:
+      instance:
+        destinations:
+        - Name: roles_test_xsuaa_user_test_html_repo_host
+          ServiceInstanceName: xsuaa-user-test-html5-app-host-service
+          ServiceKeyName: xsuaa-user-test_html_repo_host-key
+          sap.cloud.service: roles-test
+        - Authentication: OAuth2UserTokenExchange
+          Name: roles_test_uaa_xsuaa_user_test
+          ServiceInstanceName: xsuaa-user-test-xsuaa-service
+          ServiceKeyName: uaa_xsuaa-user-test-key
+          sap.cloud.service: roles-test
+        existing_destinations_policy: ignore
+  build-parameters:
+    no-source: true
+- name: xsuaa-user-test-db-deployer
+  type: hdb
+  path: gen/db
+  requires:
+  - name: xsuaa-user-test-db
+  parameters:
+    buildpack: nodejs_buildpack
+- name: xsuaa-user-test-app-content
+  type: com.sap.application.content
+  path: .
+  requires:
+  - name: xsuaa-user-test_html_repo_host
+    parameters:
+      content-target: true
+  build-parameters:
+    build-result: resources
+    requires:
+    - artifacts:
+      - usertest.zip
+      name: usertest
+      target-path: resources/
+- name: usertest
+  type: html5
+  path: app/user-test
+  build-parameters:
+    build-result: dist
+    builder: custom
+    commands:
+    - npm install
+    - npm run build:cf
+    supported-platforms: []
+resources:
+- name: xsuaa-user-test-destination-service
+  type: org.cloudfoundry.managed-service
+  parameters:
+    config:
+      HTML5Runtime_enabled: true
+      init_data:
+        instance:
+          destinations:
+          - Authentication: NoAuthentication
+            Name: ui5
+            ProxyType: Internet
+            Type: HTTP
+            URL: https://ui5.sap.com
+          existing_destinations_policy: update
+      version: 1.0.0
+    service: destination
+    service-name: xsuaa-user-test-destination-service
+    service-plan: lite
+- name: xsuaa-user-test_html_repo_host
+  type: org.cloudfoundry.managed-service
+  parameters:
+    service: html5-apps-repo
+    service-name: xsuaa-user-test-html5-app-host-service
+    service-plan: app-host
+- name: uaa_xsuaa-user-test
+  type: org.cloudfoundry.managed-service
+  parameters:
+    config:
+      tenant-mode: dedicated
+      xsappname: xsuaa-user-test-${org}-${space}
+    path: ./xs-security.json
+    service: xsuaa
+    service-name: xsuaa-user-test-xsuaa-service
+    service-plan: application
+- name: xsuaa-user-test-db
+  type: com.sap.xs.hdi-container
+  parameters:
+    service: hana
+    service-plan: hdi-shared
+parameters:
+  deploy_mode: html5-repo
+  enable-parallel-deployments: true
+build-parameters:
+  before-all:
+  - builder: custom
+    commands:
+    - npm ci
+    - npx cds build --production

@@ -1,0 +1,45 @@
+{
+  "xsappname": "xsuaa-user-test",
+  "tenant-mode": "dedicated",
+  "description": "Security profile of called application",
+  "scopes": [
+    {
+      "name": "uaa.user",
+      "description": "UAA"
+    },
+    {
+      "name": "$XSAPPNAME.author",
+      "description": "Author/Admin"
+    },
+    {
+      "name": "$XSAPPNAME.viewer",
+      "description": "Viewer/Reader"
+    }
+  ],
+  "role-templates": [
+    {
+      "name": "Token_Exchange",
+      "description": "UAA",
+      "scope-references": [
+        "uaa.user"
+      ]
+    },
+    {
+      "name": "author",
+      "description": "Author/Admin",
+      "scope-references": [
+        "uaa.user",
+        "$XSAPPNAME.author"
+      ]
+    },
+    {
+      "name": "viewer",
+      "description": "Viewer/Reader",
+      "scope-references": [
+        "uaa.user",
+        "$XSAPPNAME.viewer"
+      ]
+    }
+  ],
+  "attributes": []
+}
